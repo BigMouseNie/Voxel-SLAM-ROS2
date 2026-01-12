@@ -11,22 +11,46 @@ public:
     return inst;
   }
 
+  // modify marker
+  // void pub_odom_func(IMUST &xc)
+  // {
+  //   Eigen::Quaterniond q_this(xc.R);
+  //   Eigen::Vector3d t_this = xc.p;
+
+  //   static tf2_ros::TransformBroadcaster br;
+  //   tf::Transform transform;
+  //   tf::Quaternion q;
+  //   transform.setOrigin(tf::Vector3(t_this.x(), t_this.y(), t_this.z()));
+  //   q.setW(q_this.w());
+  //   q.setX(q_this.x());
+  //   q.setY(q_this.y());
+  //   q.setZ(q_this.z());
+  //   transform.setRotation(q);
+  //   ros::Time ct = ros::Time::now();
+  //   br.sendTransform(tf::StampedTransform(transform, ct, "/camera_init", "/aft_mapped"));
+  // }
+
   void pub_odom_func(IMUST &xc)
   {
-    Eigen::Quaterniond q_this(xc.R);
-    Eigen::Vector3d t_this = xc.p;
+      Eigen::Quaterniond q_this(xc.R);
+      Eigen::Vector3d t_this = xc.p;
 
-    static tf2_ros::TransformBroadcaster br;
-    tf::Transform transform;
-    tf::Quaternion q;
-    transform.setOrigin(tf::Vector3(t_this.x(), t_this.y(), t_this.z()));
-    q.setW(q_this.w());
-    q.setX(q_this.x());
-    q.setY(q_this.y());
-    q.setZ(q_this.z());
-    transform.setRotation(q);
-    ros::Time ct = ros::Time::now();
-    br.sendTransform(tf::StampedTransform(transform, ct, "/camera_init", "/aft_mapped"));
+      geometry_msgs::msg::TransformStamped tf_msg;
+
+      tf_msg.header.stamp = this->now();
+      tf_msg.header.frame_id = "camera_init";
+      tf_msg.child_frame_id = "aft_mapped";
+
+      tf_msg.transform.translation.x = t_this.x();
+      tf_msg.transform.translation.y = t_this.y();
+      tf_msg.transform.translation.z = t_this.z();
+
+      tf_msg.transform.rotation.w = q_this.w();
+      tf_msg.transform.rotation.x = q_this.x();
+      tf_msg.transform.rotation.y = q_this.y();
+      tf_msg.transform.rotation.z = q_this.z();
+
+      tf_broadcaster_->sendTransform(tf_msg);
   }
 
   void pub_localtraj(PLV(3) &pwld, double jour, IMUST &x_curr, int cur_session, pcl::PointCloud<PointType> &pcl_path)
@@ -304,6 +328,7 @@ public:
 
   }
 
+  // modify marker
   void previous_map_read(vector<STDescManager*> &std_managers, vector<vector<ScanPose*>*> &multimap_scanPoses, vector<vector<Keyframe*>*> &multimap_keyframes, ConfigSetting &config_setting, PGO_Edges &edges, ros::NodeHandle &n, vector<string> &fnames, vector<double> &juds, string &savepath, int win_size)
   {
     int acsize = 10; int mgsize = 5;
@@ -573,7 +598,9 @@ public:
     for(double &iter: plane_eigen_value_thre)
       iter = 1.0 / 4;
 
-    double t0 = ros::Time::now().toSec();
+    // modify marker
+    // double t0 = ros::Time::now().toSec();
+    double t0 = this->now().seconds();
     double converge_thre = 0.05;
     int converge_times = 0;
     bool is_degrade = true;
@@ -695,7 +722,9 @@ public:
     acc *= 9.8;
 
     pl_origs.clear(); vec_imus.clear(); beg_times.clear();
-    double t1 = ros::Time::now().toSec();
+    // modify marker
+    // double t1 = ros::Time::now().toSec();
+    double t1 = this->now().seconds();
     printf("init time: %lf\n", t1 - t0);
 
     // align_gravity(x_buf);
@@ -1172,7 +1201,9 @@ public:
       if(EKF_stop_flg) break;
     }
 
-    double tt1 = ros::Time::now().toSec();
+    // modify marker
+    // double tt1 = ros::Time::now().toSec();
+    double tt1 = this->now().seconds();
     for(pointVar pv: *pptr)
     {
       pv.pnt = x_curr.R * pv.pnt + x_curr.p;
@@ -1182,7 +1213,9 @@ public:
     }
     down_sampling_voxel(*pl_tree, 0.5);
     kd_map.setInputCloud(pl_tree);
-    double tt2 = ros::Time::now().toSec();
+    // modify marker
+    // double tt2 = ros::Time::now().toSec();
+    double tt2 = this->now().seconds()
   }
 
   // After detecting loop closure, refine current map and states
@@ -1699,7 +1732,9 @@ public:
         pvec_update(pptr, x_curr, pwld);
         ResultOutput::instance().pub_localtraj(pwld, jour, x_curr, sessionNames.size()-1, pcl_path);
 
-        t1 = ros::Time::now().toSec();
+        // modify marker
+        // t1 = ros::Time::now().toSec();
+        t1 = this->now()->seconds();
 
         win_count++;
         x_buf.push_back(x_curr);
@@ -1715,10 +1750,15 @@ public:
 
         // cut_voxel(surf_map, pvec_buf[win_count-1], win_count-1, surf_map_slide, win_size, pwld, sws[0]);
         cut_voxel_multi(surf_map, pvec_buf[win_count-1], win_count-1, surf_map_slide, win_size, pwld, sws);
-        t2 = ros::Time::now().toSec();
+        // modify marker
+        // t2 = ros::Time::now().toSec();
+        t2 = this->now()->seconds();
 
         multi_recut(surf_map_slide, win_count, x_buf, voxhess, sws);
-        t3 = ros::Time::now().toSec();
+
+        // modify marker
+        // t3 = ros::Time::now().toSec();
+        t3 = this->now()->seconds();
 
         if(degrade_cnt > degrade_bound)
         {
@@ -1918,7 +1958,9 @@ public:
 
   // The main thread of loop clousre
   // The topDownProcess of HBA is also run here
-  void thd_loop_closure(ros::NodeHandle &n)
+  // modify marker
+  // void thd_loop_closure(ros::NodeHandle &n)
+  void thd_loop_closure()
   {
     pl_kdmap.reset(new pcl::PointCloud<PointType>);
     vector<STDescManager*> std_managers;
@@ -1928,14 +1970,31 @@ public:
     double ratio_drift = 0.05;
     int curr_halt = 10, prev_halt = 30;
     int isHighFly = 0;
-    n.param<double>("Loop/jud_default", jud_default, 0.45);
-    n.param<double>("Loop/icp_eigval", icp_eigval, 14);
-    n.param<double>("Loop/ratio_drift", ratio_drift, 0.05);
-    n.param<int>("Loop/curr_halt", curr_halt, 10);
-    n.param<int>("Loop/prev_halt", prev_halt, 30);
-    n.param<int>("Loop/isHighFly", isHighFly, 0);
+    // modify marker
+    // n.param<double>("Loop/jud_default", jud_default, 0.45);
+    // n.param<double>("Loop/icp_eigval", icp_eigval, 14);
+    // n.param<double>("Loop/ratio_drift", ratio_drift, 0.05);
+    // n.param<int>("Loop/curr_halt", curr_halt, 10);
+    // n.param<int>("Loop/prev_halt", prev_halt, 30);
+    // n.param<int>("Loop/isHighFly", isHighFly, 0);
+    this->declare_parameter<double>("Loop.jud_default", 0.45);
+    this->declare_parameter<double>("Loop.icp_eigval", 14.0);
+    this->declare_parameter<double>("Loop.ratio_drift", 0.05);
+    this->declare_parameter<int>("Loop.curr_halt", 10);
+    this->declare_parameter<int>("Loop.prev_halt", 30);
+    this->declare_parameter<int>("Loop.isHighFly", 0);
+
+    this->get_parameter("Loop.jud_default", jud_default);
+    this->get_parameter("Loop.icp_eigval", icp_eigval);
+    this->get_parameter("Loop.ratio_drift", ratio_drift);
+    this->get_parameter("Loop.curr_halt", curr_halt);
+    this->get_parameter("Loop.prev_halt", prev_halt);
+    this->get_parameter("Loop.isHighFly", isHighFly);
     ConfigSetting config_setting;
-    read_parameters(n, config_setting, isHighFly);
+
+    // modify marker
+    // read_parameters(n, config_setting, isHighFly);
+    read_parameters(this, config_setting, isHighFly);
 
     vector<double> juds;
     FileReaderWriter::instance().previous_map_names(n, sessionNames, juds);
@@ -1966,7 +2025,9 @@ public:
     IMUST x_key;
     int buf_base = 0;
 
-    while(n.ok())
+    // modify marker
+    // while(n.ok())
+    while(rclcpp::ok())
     {
       if(reset_flag == 1)
       {
@@ -2356,7 +2417,9 @@ public:
     pub_pl_func(pl0, pub_prev_path);
     pub_pl_func(pl0, pub_scan);
 
-    double t0 = ros::Time::now().toSec();
+    // modify marker
+    // double t0 = ros::Time::now().toSec();
+    double t0 = this->now().seconds();
     while(gba_flag);
     
     for(PGO_Edge &edge: gba_edges1.edges)
@@ -2414,7 +2477,9 @@ public:
 
     Eigen::Quaterniond qq(multimap_scanPoses[0]->at(0)->x.R);
 
-    double t1 = ros::Time::now().toSec();
+    // modify marker
+    // double t1 = ros::Time::now().toSec();
+    double t1 = this->now().seconds();
     printf("GBA opt: %lfs\n", t1 - t0);
 
     for(int ii=0; ii<idsize; ii++)
@@ -2437,7 +2502,9 @@ public:
     bool is_display = false;
     if(plptr == nullptr) is_display = true;
 
-    double t0 = ros::Time::now().toSec();
+    // modify marker
+    // double t0 = ros::Time::now().toSec();
+    double t0 = this->now().seconds();
     vector<Keyframe*> smps;
     vector<IMUST> xs;
     int last_mp = -1, isCnct = 0;
@@ -2597,14 +2664,26 @@ public:
   }
 
   // The main thread of bottom up in global mapping
-  void thd_globalmapping(ros::NodeHandle &n)
+  // modify marker
+  // void thd_globalmapping(ros::NodeHandle &n)
+  //   n.param<double>("GBA/voxel_size", gba_voxel_size, 1.0);
+  //   n.param<double>("GBA/min_eigen_value", gba_min_eigen_value, 0.01);
+  //   n.param<vector<double>>("GBA/eigen_value_array", gba_eigen_value_array, vector<double>());
+  void thd_globalmapping()
   {
-    n.param<double>("GBA/voxel_size", gba_voxel_size, 1.0);
-    n.param<double>("GBA/min_eigen_value", gba_min_eigen_value, 0.01);
-    n.param<vector<double>>("GBA/eigen_value_array", gba_eigen_value_array, vector<double>());
+    this->declare_parameter<double>("GBA.voxel_size", 1.0);
+    this->declare_parameter<double>("GBA.min_eigen_value", 0.01);
+    this->declare_parameter<std::vector<double>>(
+        "GBA.eigen_value_array", std::vector<double>());
+    this->get_parameter("GBA.voxel_size", gba_voxel_size);
+    this->get_parameter("GBA.min_eigen_value", gba_min_eigen_value);
+    this->get_parameter("GBA.eigen_value_array", gba_eigen_value_array);
     for(double &iter: gba_eigen_value_array) iter = 1.0 / iter;
     int total_max_iter = 1;
-    n.param<int>("GBA/total_max_iter", total_max_iter, 1);
+    // modify marker
+    // n.param<int>("GBA/total_max_iter", total_max_iter, 1);
+    this->declare_parameter<int>("GBA.total_max_iter", 1);
+    this->get_parameter("GBA.total_max_iter", total_max_iter);
 
     vector<Keyframe*> gba_submaps;
     deque<int> localID;
@@ -2615,7 +2694,9 @@ public:
     int mgsize = 5;
     int thread_num = 5;
 
-    while(n.ok())
+    // modify marker
+    // while(n.ok())
+    while(rclcpp::ok())
     {
       if(multimap_keyframes.empty())
       {
@@ -2662,7 +2743,9 @@ public:
       }
       mtx_keyframe.unlock();
 
-      double tg1 = ros::Time::now().toSec();
+      // modify marker
+      // double tg1 = ros::Time::now().toSec();
+      double tg1 = this->now().seconds();
 
       Keyframe *gba_smp = new Keyframe(smp_local[0]->x0);
       vector<int> mps{smp_mp};
@@ -2743,16 +2826,16 @@ int main(int argc, char **argv)
   // thread_gba.join();
   // ros::spin(); return 0;
 
-
-
-
-
   mp = new int[voxel_node->win_size];
   for(int i = 0; i < voxel_node->win_size; i++)
       mp[i] = i;
 
-  std::thread thread_loop(&VOXEL_SLAM::thd_loop_closure, voxel_node.get());
-  std::thread thread_gba(&VOXEL_SLAM::thd_globalmapping, voxel_node.get());
+  std::thread thread_gba([voxel_node]() {
+    voxel_node->thd_loop_closure();
+  });
+  std::thread thread_gba([voxel_node]() {
+    voxel_node->thd_globalmapping();
+  });
 
   voxel_node->thd_odometry_localmapping();
 
